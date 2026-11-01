@@ -40,7 +40,9 @@ Finish production single-arena/mobile checks, push one initial commit to the pub
 
 - Merged Pets PR #1 is on default branch `feat/ghost-arena` at `910277d`.
 - Vercel project updated to Node 24 and Git deployment creation enabled.
-- GitHub app authorization/repository connection is still required; `vercel git connect` was rejected and the CLI cannot create automation tokens (HTTP 403).
+- GitHub app access is authorized and Vercel is connected to `Junaid2005/codex-paintabll`, confirmed through the project API.
+- Production branch: `feat/ghost-arena`. Default-branch pushes/merges publish production; other branches create previews.
+- GitHub CI runs successfully with all eight tests, type checking and the production build.
 - Added CI for web/server type checking, unit tests and production frontend builds.
 - Corrected the existing solo-combat test fixture to keep companion fire on cooldown; player-shot and respawn assertions remain intact.
 - The VPS server is separate from Vercel’s frontend deployment pipeline.
