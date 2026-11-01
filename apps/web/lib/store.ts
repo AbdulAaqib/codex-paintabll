@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { playSound, setAudioMuted, spatialMix, unlockAudio } from './audio';
+export { unlockAudio } from './audio';
 import { io, type Socket } from 'socket.io-client';
 import type { ClientEvents, ServerEvents, JoinReply } from '../../../packages/shared/src/protocol';
 import type { Input, Player, Shot, Snapshot } from '../../../packages/shared/src/types';
@@ -59,7 +61,12 @@ export const useGame = create<State>((set, get) => ({
   hitAt: 0,
   hurtAt: 0,
   muted: false,
-  toggleMute: () => set((s) => ({ muted: !s.muted })),
+  toggleMute: () => {
+    const muted = !get().muted;
+    setAudioMuted(muted);
+    if (!muted) unlockAudio();
+    set({ muted });
+  },
   join: (name, pet) => {
     socket?.disconnect();
     if (timer) clearInterval(timer);
@@ -108,7 +115,13 @@ export const useGame = create<State>((set, get) => ({
     socket.on('snapshot', (snapshot) => {
       const me = snapshot.players.find((p) => p.id === get().id);
       if (me) {
-        if (runtime.local && me.hp < runtime.local.hp) set({ hurtAt: performance.now() });
+        const previous = get().snapshot?.players.find((p) => p.id === me.id);
+        if (previous && me.hp < previous.hp) {
+          set({ hurtAt: performance.now() });
+          playSound(me.hp === 0 ? 'out' : 'hurt');
+        } else if (previous?.hp === 0 && me.hp > 0) {
+          playSound('respawn');
+        }
         runtime.clockOffset = snapshot.time - Date.now();
         runtime.pending = runtime.pending.filter((i) => i.seq > me.seq);
         const next = clone(me);
@@ -123,7 +136,15 @@ export const useGame = create<State>((set, get) => ({
         shots: [...s.shots.filter((q) => shot.at - q.at < 4500), shot].slice(-100),
         hitAt: shot.shooter === s.id && shot.hit ? performance.now() : s.hitAt,
       }));
-      playSound(shot.hit ? 'hit' : 'shot');
+      const me = runtime.local;
+      if (me) {
+        const local = shot.shooter === get().id;
+        const origin = local ? { volume: 1, pan: 0 } : spatialMix(shot.from, me.position, controls.yaw);
+        playSound(shot.pet ? 'pet' : 'shot', origin.volume, origin.pan);
+        const impact = spatialMix(shot.to, me.position, controls.yaw);
+        playSound('splat', impact.volume * 0.7, impact.pan);
+        if (local && shot.hit) playSound(shot.killed ? 'elimination' : 'hit');
+      }
     });
     socket.on('connect_error', () =>
       set({
@@ -199,13 +220,28 @@ export const useGame = create<State>((set, get) => ({
   },
 }));
 function startLoop() {
+  let stride = 0;
   if (timer) clearInterval(timer);
   timer = setInterval(() => {
     const s = useGame.getState(),
       p = runtime.local;
     if (!p || (s.status !== 'online' && s.status !== 'practice')) return;
     const input: Input = { seq: ++runtime.seq, ...controls };
-    movePlayer(p, input, DT, Date.now() + runtime.clockOffset);
+    const before = { x: p.position.x, z: p.position.z, grounded: p.grounded, vy: p.vy,
+      diveUntil: p.diveUntil, knockUntil: p.knockUntil };
+    const now = Date.now() + runtime.clockOffset;
+    movePlayer(p, input, DT, now);
+    // Emit movement cues only during prediction, never when replaying reconciled inputs.
+    if (p.hp > 0) {
+      if (before.grounded && !p.grounded && p.vy > 0) playSound('jump');
+      if (!before.grounded && p.grounded && before.vy < -2) playSound('land');
+      if (p.diveUntil > before.diveUntil) playSound('dive');
+      if (p.knockUntil > before.knockUntil) playSound('stumble');
+      if (p.grounded && now >= p.diveUntil && now >= p.knockUntil) {
+        stride += Math.hypot(p.position.x - before.x, p.position.z - before.z);
+        if (stride >= 1.8) { playSound('step'); stride = 0; }
+      } else stride = 0;
+    } else stride = 0;
     if (s.status === 'online') {
       runtime.pending.push(input);
       runtime.pending = runtime.pending.slice(-60);
@@ -238,31 +274,4 @@ function startLoop() {
     controls.dive = false;
     controls.stumble = false;
   }, DT * 1000);
-}
-let audio: AudioContext | null = null;
-export function unlockAudio() {
-  try {
-    audio ??= new AudioContext();
-    void audio.resume();
-  } catch {}
-}
-export function playSound(kind: 'shot' | 'hit') {
-  if (useGame.getState().muted) return;
-  try {
-    if (!audio || audio.state !== 'running') return;
-    const osc = audio.createOscillator(),
-      gain = audio.createGain();
-    osc.connect(gain);
-    gain.connect(audio.destination);
-    osc.type = kind === 'shot' ? 'triangle' : 'sine';
-    osc.frequency.setValueAtTime(kind === 'shot' ? 240 : 720, audio.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(
-      kind === 'shot' ? 60 : 1050,
-      audio.currentTime + 0.065,
-    );
-    gain.gain.setValueAtTime(0.055, audio.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.1);
-    osc.start();
-    osc.stop(audio.currentTime + 0.11);
-  } catch {}
 }
