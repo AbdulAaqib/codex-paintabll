@@ -68,6 +68,14 @@ Required: a server-only provider key with credits, S3/R2 credentials, public COR
 
 Full ragdoll simulation and spectator mode are also pending. The final two-human test on physical devices has not been performed by the agent; automated browser checks do not replace that test.
 
+## Automatic deployment and checks
+
+Vercel is connected to `Junaid2005/codex-paintabll` through its GitHub app, with automatic Git deployments enabled and Node 24 configured. The production branch is `feat/ghost-arena` (the repository’s default branch). Pushes and merged PRs to that branch publish to https://ghost-arena-theta.vercel.app; other branches receive previews. Manage the connection in [Vercel Git settings](https://vercel.com/junaid2005s-projects/ghost-arena/settings/git). No Vercel token is stored in GitHub.
+
+`.github/workflows/ci.yml` runs type checking, simulation/combat tests and a production build on pushes and pull requests. Vercel’s native build and this CI check run independently; branch protection can require the CI check before merging. Fork deployment authorization remains managed by Vercel.
+
+The persistent multiplayer server is deployed separately. A Vercel frontend deployment does not update server-side gameplay changes on the VPS.
+
 ## Deployment
 
 The frontend runs on Vercel; the authoritative server runs as an isolated Docker container on the configured VPS. The deployed Next.js dependency is 16.4.3. The public frontend origin must exactly match `CORS_ORIGIN` on the server.

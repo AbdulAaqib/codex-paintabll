@@ -17,7 +17,8 @@ function member(index = 0): Member {
     input: idleInput(),
     lastInputAt: time,
     lastShot: 0,
-    lastPetShot: 0,
+    // Keep companion fire on cooldown in fixtures that isolate player shooting.
+    lastPetShot: time,
     lastReceivedSeq: -1,
     rateStart: time,
     rateCount: 0,
