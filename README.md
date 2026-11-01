@@ -7,6 +7,10 @@ Multiplayer paintball inside a hand-built 3D interpretation of the DevDay Exchan
 
 Enter a name and play. Everyone joins one public arena, with 12 concurrent seats. Three hits eliminate a player; respawns take three seconds. The game runs continuously: there are no room codes, match timers or automatic score resets. Scores last while the player’s server identity remains available. Disconnecting reserves the identity for 30 seconds; restarting the server resets its in-memory state.
 
+## Codex buddies
+
+Before entering, choose a built-in ChatGPT Pet as your arena buddy. The selected pet follows its owner, fires a deliberately slow server-authoritative assist shot at nearby visible opponents, and credits any elimination to its owner. Pets vanish with their owner on elimination and return after respawn. The lobby uses the official Pet sprite sheets; the selected pet is carried in the join request so every player sees the same companion.
+
 ## Contributing
 
 Use Node 24 and npm. Clone this repository and install from the root:
