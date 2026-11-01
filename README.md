@@ -7,9 +7,11 @@ Multiplayer paintball inside a hand-built 3D interpretation of the DevDay Exchan
 
 Enter a name and play. Everyone joins one public arena, with 12 concurrent seats. Three hits eliminate a player; respawns take three seconds. The game runs continuously: there are no room codes, match timers or automatic score resets. Scores last while the player’s server identity remains available. Disconnecting reserves the identity for 30 seconds; restarting the server resets its in-memory state.
 
-## Codex buddies
+## Play as a Codex pet
 
-Before entering, choose a built-in ChatGPT Pet as your arena buddy. The selected pet follows its owner, fires a deliberately slow server-authoritative assist shot at nearby visible opponents, and credits any elimination to its owner. Pets vanish with their owner on elimination and return after respawn. The lobby uses the official Pet sprite sheets; the selected pet is carried in the join request so every player sees the same companion.
+Choose one of nine built-in Codex pets as your playable character before entering. Your choice is previewed in the lobby, remembered on this device, and sent to the server so every player sees the same character. Pets animate while idle, running, jumping, diving and stumbling, and keep their identity after elimination, respawn and reconnect. All characters share the same movement, health, hitbox and firing rules. There is no separate humanoid or companion, and shots require player input.
+
+Both frontend and server must be updated together. Older server versions ignore pet selection; the client reports a failed character load instead of silently substituting Codex.
 
 ## Live commentary
 
@@ -35,7 +37,7 @@ npm run test:network
 npm run build
 ```
 
-`test:network` creates eight real clients, navigates through venue doors using input commands, and tests authoritative combat, score synchronization, respawn, invalid input rejection, reconnect identity and the shared arena. Run it against a fresh local server so existing human players do not occupy its test spawn positions. It takes about 20–45 seconds. Never run combat fixtures in an occupied public arena.
+`test:network` creates nine real clients with distinct pet characters, navigates through venue doors using input commands, and tests authoritative combat, score synchronization, respawn, invalid input rejection, reconnect identity and the shared arena. Run it against a fresh local server so existing human players do not occupy its test spawn positions. It takes about 20–45 seconds. Never run combat fixtures in an occupied public arena.
 
 Please use feature branches and pull requests. Useful contribution areas:
 
@@ -48,13 +50,13 @@ Please use feature branches and pull requests. Useful contribution areas:
 
 Desktop: WASD to move, click the arena to lock the mouse, mouse to aim, hold left click to fire, Space to jump, Shift to dive, R to stumble, Tab for scores, Esc to release the cursor.
 
-Mobile: left joystick to move, drag the right half to aim, hold FIRE to shoot. Jump and dive have their own buttons. Landscape is recommended. The game menu includes fullscreen, sound, scores and leaving the arena.
+Mobile: left joystick to move, drag the right half to aim, hold FIRE to shoot. Jump and dive have their own buttons. Landscape is recommended. The game menu includes fullscreen, sound, scores and leaving the arena. Sound effects include marker pops, pet shots, paint splats, hit/elimination confirmation, damage, respawn, footsteps, jumps, landings, dives and stumbles. Nearby shots and impacts fade with distance and pan with your aim. Audio starts after interaction; Mute silences all effects, including sounds already playing. Effects are synthesized locally with Web Audio and require no downloads.
 
 ## Architecture
 
 Next.js App Router, React Three Fiber/Three.js, Drei, Rapier and Zustand. The persistent Node/Socket.IO server simulates at 25 Hz. Browser clients currently use Socket.IO long polling for reliable connectivity; the server also supports WSS, which is exercised by the network test. Clients send sequenced inputs, predict movement using the shared simulation and reconcile acknowledged inputs; remote avatars interpolate. The server owns positions, movement bounds, collisions, hitscan, fire cooldown, health, scores and knockdown state. Player resume tokens stay in sessionStorage. There are no accounts or databases.
 
-The default humanoid has articulated joints and cosmetic wobble, stride, dive, stumble, recoil and elimination collapse. This is **not a fully simulated ragdoll**. The client has a stable Rapier capsule and static colliders. Authoritative movement uses shared kinematic collision rules. Hitscan uses authoritative boxes, with conservative ramp bounding boxes.
+Playable characters are camera-facing animated pet sprites using the built-in 8-column, 9-row sheets. The client has a stable Rapier capsule and static colliders. Authoritative movement uses shared kinematic collision rules. Hitscan uses authoritative boxes, with conservative ramp bounding boxes.
 
 ## Venue
 
@@ -66,13 +68,21 @@ The 311 MB source video stays local and is excluded from Git, Vercel and Docker 
 
 ## Outstanding work
 
-**Photo-generated avatars are not enabled.** No completed generated photo mesh or successful provider call is claimed. The existing character loader supports textured GLBs, embedded clips, skeleton-safe cloning and height normalization, but trusted asset registration, upload UI, provider calls and storage still need implementing and end-to-end testing.
+**Photo-generated avatars are not enabled.** No completed generated photo mesh or successful provider call is claimed. Gameplay currently uses pet sprites. Photo meshes, trusted asset registration, upload UI, provider calls and storage would require a separate implementation and end-to-end testing.
 
 Provider research (1 November 2026): [Meshy image-to-3D](https://docs.meshy.ai/en/api/image-to-3d) supports textured GLB, A-pose, 2K textures and target polygon count. [Rigging](https://docs.meshy.ai/en/api/rigging) supports clearly defined textured humanoids and optional basic walk/run outputs. Meshy models face +Z; this game faces −Z, so an orientation adapter is needed. [Pricing](https://docs.meshy.ai/en/api/pricing) lists 30 credits for Meshy 7.1 generation with 2K textures and 5 for automatic rigging; extra animation actions cost extra. Generation latency and skeleton compatibility have not been measured in this project.
 
 Required: a server-only provider key with credits, S3/R2 credentials, public CORS-enabled asset storage, validated photo upload and confirmation, genuine progress polling, durable GLBs, generation-ID caching, rigging/animation integration, error/retry handling and default-avatar fallback. Do not persist expiring provider URLs as permanent avatar assets. Keep the game playable during generation.
 
 Full ragdoll simulation and spectator mode are also pending. The final two-human test on physical devices has not been performed by the agent; automated browser checks do not replace that test.
+
+## Automatic deployment and checks
+
+Vercel is connected to `Junaid2005/codex-paintabll` through its GitHub app, with automatic Git deployments enabled and Node 24 configured. The production branch is `feat/ghost-arena` (the repository’s default branch). Pushes and merged PRs to that branch publish to https://ghost-arena-theta.vercel.app; other branches receive previews. Manage the connection in [Vercel Git settings](https://vercel.com/junaid2005s-projects/ghost-arena/settings/git). No Vercel token is stored in GitHub.
+
+`.github/workflows/ci.yml` runs type checking, simulation/combat tests and a production build on pushes and pull requests. Vercel’s native build and this CI check run independently; branch protection can require the CI check before merging. Fork deployment authorization remains managed by Vercel.
+
+The persistent multiplayer server is deployed separately. A Vercel frontend deployment does not update server-side gameplay changes on the VPS.
 
 ## Deployment
 

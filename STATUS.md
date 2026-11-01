@@ -36,3 +36,21 @@ Persistent server: https://ghost-arena.162.19.137.169.sslip.io/health
 ## Next actions
 
 Finish production single-arena/mobile checks, push one initial commit to the public GitHub repository, then enable/test avatar generation when credentials are supplied.
+
+## Auto-deployment setup
+
+- Merged Pets PR #1 is on default branch `feat/ghost-arena` at `910277d`.
+- Vercel project updated to Node 24 and Git deployment creation enabled.
+- GitHub app access is authorized and Vercel is connected to `Junaid2005/codex-paintabll`, confirmed through the project API.
+- Production branch: `feat/ghost-arena`. Default-branch pushes/merges publish production; other branches create previews.
+- GitHub CI runs successfully with all eight tests, type checking and the production build.
+- Added CI for web/server type checking, unit tests and production frontend builds.
+- Corrected the existing solo-combat test fixture to keep companion fire on cooldown; player-shot and respawn assertions remain intact.
+- The VPS server is separate from Vercel’s frontend deployment pipeline.
+
+## Landing-page scrolling
+
+- The lobby now scrolls vertically on short laptop windows; its form and footer participate in normal layout rather than clipping below the viewport.
+- The 3D background stays fixed while the lobby scrolls.
+- Browser-verified at 1366×620, 1280×720 and 390×844: mouse-wheel scrolling reaches the entry button without horizontal overflow.
+- Confirmed entering the arena still produces a fixed 620px-high game viewport with scrolling disabled. Web/server type checking passes.

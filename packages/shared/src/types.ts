@@ -28,7 +28,6 @@ export type Player = {
   diveUntil: number;
   respawnAt: number;
   protectedUntil: number;
-  avatarUrl?: string;
   pet: import('./pets.ts').PetId;
 };
 export type Shot = {

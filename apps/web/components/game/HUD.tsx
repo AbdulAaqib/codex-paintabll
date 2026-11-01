@@ -16,7 +16,7 @@ import {
 import { useGame, runtime } from '../../lib/store';
 import { MobileControls } from './MobileControls';
 import { GhostMark } from '../lobby/Lobby';
-import { PETS } from '../../../../packages/shared/src/pets';
+import { PETS, isPetId } from '../../../../packages/shared/src/pets';
 export function HUD() {
   const s = useGame(),
     [now, setNow] = useState(Date.now()),
@@ -160,11 +160,11 @@ export function HUD() {
       <div className="hud-bottom">
         <div className="player-status">
           <div className="player-avatar">
-            <GhostMark />
+            <span className="pet-preview" style={{ backgroundImage: `url(${PETS[isPetId(me?.pet) ? me.pet : s.selectedPet].sprite})` }} />
           </div>
           <div>
             <span className="callsign">{me?.name || 'ROOKIE'}</span>
-            <small className="buddy-readout">BUDDY · {me?.pet && me.pet in PETS ? PETS[me.pet].name.toUpperCase() : 'CODEX'}</small>
+            <small className="character-readout">PLAYING AS {PETS[isPetId(me?.pet) ? me.pet : s.selectedPet].name.toUpperCase()}</small>
             <div className="health-pips">
               {[1, 2, 3].map((n) => (
                 <i key={n} className={(me?.hp || 0) >= n ? 'full' : ''} />
