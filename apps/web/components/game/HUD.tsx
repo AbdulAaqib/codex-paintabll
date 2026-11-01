@@ -178,7 +178,7 @@ export function HUD() {
           </button>
         </div>
         <div className="ammo">
-          <Crosshair size={24} />
+          <img className="marker-icon" src="/characters/marker.png" alt="" />
           <strong>∞</strong>
           <span>
             PAINT
