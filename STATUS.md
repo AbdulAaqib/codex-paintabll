@@ -35,3 +35,12 @@ Persistent server: https://ghost-arena.162.19.137.169.sslip.io/health
 ## Next actions
 
 Finish production single-arena/mobile checks, push one initial commit to the public GitHub repository, then enable/test avatar generation when credentials are supplied.
+
+## Auto-deployment setup
+
+- Merged Pets PR #1 is on default branch `feat/ghost-arena` at `910277d`.
+- Vercel project updated to Node 24 and Git deployment creation enabled.
+- GitHub app authorization/repository connection is still required; `vercel git connect` was rejected and the CLI cannot create automation tokens (HTTP 403).
+- Added CI for web/server type checking, unit tests and production frontend builds.
+- Corrected the existing solo-combat test fixture to keep companion fire on cooldown; player-shot and respawn assertions remain intact.
+- The VPS server is separate from Vercel’s frontend deployment pipeline.
