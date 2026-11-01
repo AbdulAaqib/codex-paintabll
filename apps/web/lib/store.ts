@@ -4,6 +4,7 @@ import type { ClientEvents, ServerEvents, JoinReply } from '../../../packages/sh
 import type { Input, Player, Shot, Snapshot } from '../../../packages/shared/src/types';
 import { movePlayer } from '../../../packages/shared/src/movement';
 import { DT, MATCH_MS } from '../../../packages/shared/src/constants';
+import type { PetId } from '../../../packages/shared/src/pets';
 
 export const controls = {
   x: 0,
@@ -29,7 +30,7 @@ export const serverUrl =
     : 'http://localhost:3001');
 let socket: Socket<ServerEvents, ClientEvents> | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
-let identity: { name: string; room?: string; token?: string } | null = null;
+let identity: { name: string; room?: string; token?: string; pet: PetId } | null = null;
 const clone = (p: Player): Player => ({ ...p, position: { ...p.position } });
 interface State {
   screen: 'lobby' | 'game';
@@ -42,7 +43,7 @@ interface State {
   hitAt: number;
   hurtAt: number;
   muted: boolean;
-  join: (name: string) => void;
+  join: (name: string, pet: PetId) => void;
   practice: (name: string) => void;
   leave: () => void;
   toggleMute: () => void;
@@ -59,12 +60,12 @@ export const useGame = create<State>((set, get) => ({
   hurtAt: 0,
   muted: false,
   toggleMute: () => set((s) => ({ muted: !s.muted })),
-  join: (name) => {
+  join: (name, pet) => {
     socket?.disconnect();
     if (timer) clearInterval(timer);
     set({ status: 'connecting', error: '' });
     const saved = sessionStorage.getItem('ghost:LIVE');
-    identity = { name, token: saved || undefined };
+    identity = { name, pet, token: saved || undefined };
     socket = io(serverUrl, {
       transports: ['polling'],
       timeout: 20000,
@@ -85,7 +86,7 @@ export const useGame = create<State>((set, get) => ({
           socket?.disconnect();
           return;
         }
-        identity = { name, room: result.snapshot.room, token: result.token };
+        identity = { name, pet, room: result.snapshot.room, token: result.token };
         sessionStorage.setItem(`ghost:${identity.room}`, result.token);
         runtime.local = clone(result.snapshot.players.find((p) => p.id === result.id)!);
         runtime.pending = [];
@@ -157,6 +158,7 @@ export const useGame = create<State>((set, get) => ({
       diveUntil: 0,
       respawnAt: 0,
       protectedUntil: 0,
+      pet: 'codex',
     };
     runtime.local = p;
     runtime.pending = [];
