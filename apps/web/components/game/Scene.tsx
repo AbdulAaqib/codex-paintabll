@@ -9,7 +9,7 @@ import type { Player, Shot } from '../../../../packages/shared/src/types';
 import { controls, runtime, useGame } from '../../lib/store';
 import { Arena } from './Arena';
 import { Character } from '../avatar/Character';
-import { PETS, type PetId } from '../../../../packages/shared/src/pets';
+import { PETS } from '../../../../packages/shared/src/pets';
 
 const showcase: Player = {
   id: 'showcase',
@@ -75,56 +75,21 @@ function World() {
   const screen = useGame((s) => s.screen),
     snapshot = useGame((s) => s.snapshot),
     id = useGame((s) => s.id),
-    shots = useGame((s) => s.shots);
+    shots = useGame((s) => s.shots),
+    selectedPet = useGame((s) => s.selectedPet);
   return (
     <>
       <Arena />
       <CameraRig />
       {screen === 'lobby' ? (
-        <Character player={showcase} lobby />
+        <Character player={{ ...showcase, pet: selectedPet, color: PETS[selectedPet].color }} lobby />
       ) : (
         snapshot?.players.map((p) => <Character key={p.id} player={p} local={p.id === id} />)
       )}
-      {screen !== 'lobby' && snapshot?.players.map((p) => <PetBuddy key={`${p.id}-pet`} player={p} />)}
       {shots.slice(-60).map((s) => (
         <ShotEffect key={s.id} shot={s} />
       ))}
     </>
-  );
-}
-function PetBuddy({ player }: { player: Player }) {
-  // Gracefully show Codex while a newly deployed web client is connected to an older server.
-  const pet = player.pet && player.pet in PETS ? (player.pet as PetId) : 'codex';
-  const image = useLoader(THREE.TextureLoader, PETS[pet].sprite);
-  const texture = useMemo(() => {
-    const t = image.clone();
-    t.wrapS = THREE.RepeatWrapping;
-    t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(1 / 8, 1 / 11);
-    t.needsUpdate = true;
-    return t;
-  }, [image]);
-  const root = useRef<THREE.Group>(null);
-  useFrame(({ clock }, dt) => {
-    if (!root.current) return;
-    const phase = Math.floor(clock.elapsedTime * 5) % 6;
-    texture.offset.set(phase / 8, 10 / 11);
-    const side = player.id.length % 2 ? 1 : -1;
-    const goal = new THREE.Vector3(
-      player.position.x + Math.cos(player.yaw + Math.PI / 2) * side * 0.85 - Math.sin(player.yaw) * 0.55,
-      player.position.y + 0.95 + Math.sin(clock.elapsedTime * 3.2 + side) * 0.08,
-      player.position.z - Math.sin(player.yaw + Math.PI / 2) * side * 0.85 - Math.cos(player.yaw) * 0.55,
-    );
-    root.current.position.lerp(goal, 1 - Math.exp(-dt * 9));
-    root.current.visible = player.hp > 0;
-  });
-  return (
-    <group ref={root}>
-      <sprite scale={[1.2, 1.3, 1]}>
-        <spriteMaterial map={texture} transparent depthWrite={false} />
-      </sprite>
-      <pointLight color={PETS[pet].color} intensity={1.1} distance={2.4} />
-    </group>
   );
 }
 function CameraRig() {

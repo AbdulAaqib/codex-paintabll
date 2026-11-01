@@ -6,7 +6,7 @@ import type { ClientEvents, ServerEvents, JoinReply } from '../../../packages/sh
 import type { Input, Player, Shot, Snapshot } from '../../../packages/shared/src/types';
 import { movePlayer } from '../../../packages/shared/src/movement';
 import { DT, MATCH_MS } from '../../../packages/shared/src/constants';
-import type { PetId } from '../../../packages/shared/src/pets';
+import { isPetId, type PetId } from '../../../packages/shared/src/pets';
 
 export const controls = {
   x: 0,
@@ -45,8 +45,10 @@ interface State {
   hitAt: number;
   hurtAt: number;
   muted: boolean;
+  selectedPet: PetId;
+  selectPet: (pet: PetId) => void;
   join: (name: string, pet: PetId) => void;
-  practice: (name: string) => void;
+  practice: (name: string, pet?: PetId) => void;
   leave: () => void;
   toggleMute: () => void;
 }
@@ -61,6 +63,10 @@ export const useGame = create<State>((set, get) => ({
   hitAt: 0,
   hurtAt: 0,
   muted: false,
+  selectedPet: 'codex',
+  selectPet: (pet) => {
+    if (isPetId(pet)) set({ selectedPet: pet });
+  },
   toggleMute: () => {
     const muted = !get().muted;
     setAudioMuted(muted);
@@ -70,7 +76,7 @@ export const useGame = create<State>((set, get) => ({
   join: (name, pet) => {
     socket?.disconnect();
     if (timer) clearInterval(timer);
-    set({ status: 'connecting', error: '' });
+    set({ status: 'connecting', error: '', selectedPet: pet });
     const saved = sessionStorage.getItem('ghost:LIVE');
     identity = { name, pet, token: saved || undefined };
     socket = io(serverUrl, {
@@ -93,9 +99,18 @@ export const useGame = create<State>((set, get) => ({
           socket?.disconnect();
           return;
         }
+        const joined = result.snapshot.players.find((p) => p.id === result.id);
+        if (joined?.pet !== pet) {
+          set({
+            screen: 'lobby', status: 'idle',
+            error: 'The arena could not load your selected character. Please try again shortly.',
+          });
+          socket?.disconnect();
+          return;
+        }
         identity = { name, pet, room: result.snapshot.room, token: result.token };
         sessionStorage.setItem(`ghost:${identity.room}`, result.token);
-        runtime.local = clone(result.snapshot.players.find((p) => p.id === result.id)!);
+        runtime.local = clone(joined);
         runtime.pending = [];
         runtime.seq = Math.max(runtime.seq, runtime.local.seq + 1);
         runtime.clockOffset = result.snapshot.time - Date.now();
@@ -157,7 +172,7 @@ export const useGame = create<State>((set, get) => ({
     });
     startLoop();
   },
-  practice: (name) => {
+  practice: (name, pet = get().selectedPet) => {
     socket?.disconnect();
     if (timer) clearInterval(timer);
     const now = Date.now();
@@ -179,7 +194,7 @@ export const useGame = create<State>((set, get) => ({
       diveUntil: 0,
       respawnAt: 0,
       protectedUntil: 0,
-      pet: 'codex',
+      pet,
     };
     runtime.local = p;
     runtime.pending = [];

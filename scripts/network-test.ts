@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { io, type Socket } from 'socket.io-client';
 import type { ClientEvents, ServerEvents, JoinReply } from '../packages/shared/src/protocol.ts';
+import { PETS, type PetId } from '../packages/shared/src/pets.ts';
 import type { Snapshot, Input } from '../packages/shared/src/types.ts';
 const url = process.env.TEST_SERVER_URL || 'http://localhost:3001';
 const origin = process.env.TEST_ORIGIN || 'http://localhost:3000';
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const clients: Socket<ServerEvents, ClientEvents>[] = [];
 const snapshots = new Map<string, Snapshot>();
-async function connect(name: string, room?: string, token?: string) {
+async function connect(name: string, room?: string, token?: string, pet: PetId = 'codex') {
   const s: Socket<ServerEvents, ClientEvents> = io(url, {
     transports: process.env.TEST_TRANSPORT === 'polling' ? ['polling'] : ['websocket'],
     extraHeaders: { Origin: origin },
@@ -22,12 +23,13 @@ async function connect(name: string, room?: string, token?: string) {
   s.on('snapshot', (snap) => snapshots.set(s.id!, snap));
   const result = await new Promise<JoinReply>((resolve, reject) => {
     const t = setTimeout(() => reject(new Error('join timeout')), 20000);
-    s.emit('join', { name, room, token }, (r) => {
+    s.emit('join', { name, room, token, pet }, (r) => {
       clearTimeout(t);
       resolve(r);
     });
   });
   assert.ok(result.ok, result.ok ? '' : result.error);
+  assert.equal(result.snapshot.players.find((p) => p.id === result.id)?.pet, pet);
   snapshots.set(s.id!, result.snapshot);
   return { s, id: result.id, room: result.snapshot.room, token: result.token };
 }
@@ -66,14 +68,17 @@ async function navigate(client: Awaited<ReturnType<typeof connect>>, x: number, 
   throw new Error(`Navigation stuck at ${JSON.stringify(p.position)} heading to ${x},${z}`);
 }
 try {
-  const a = await connect('Alice'),
-    b = await connect('Bob', a.room);
-  for (let i = 2; i < 8; i++) await connect('Guest ' + i, a.room);
-  for (let i = 0; i < 50 && (snapshots.get(a.s.id!)?.players.length || 0) < 8; i++)
+  const pets = Object.keys(PETS) as PetId[];
+  const a = await connect('Alice', undefined, undefined, 'fireball'),
+    b = await connect('Bob', a.room, undefined, 'dewey');
+  for (const pet of pets.filter((p) => p !== 'fireball' && p !== 'dewey'))
+    await connect('Guest ' + pet, a.room, undefined, pet);
+  for (let i = 0; i < 50 && (snapshots.get(a.s.id!)?.players.length || 0) < pets.length; i++)
     await pause(100);
-  assert.ok(snapshots.get(a.s.id!)!.players.length >= 8);
+  assert.ok(snapshots.get(a.s.id!)!.players.length >= pets.length);
   assert.equal(snapshots.get(b.s.id!)!.room, a.room);
-  console.log('PASS: eight real clients share the authoritative public arena');
+  assert.deepEqual(new Set(snapshots.get(a.s.id!)!.players.map((p) => p.pet)), new Set(pets));
+  console.log('PASS: all nine pet selections are distinct and visible in the shared arena');
   // Navigate through the venue using only input commands, never position writes.
   await navigate(a, 11, 14);
   await navigate(a, 11, 12);
@@ -105,7 +110,8 @@ try {
   );
   await pause(3200);
   assert.equal(snapshots.get(b.s.id!)!.players.find((p) => p.id === b.id)!.hp, 3);
-  console.log('PASS: three-second respawn visible to the other client');
+  assert.equal(snapshots.get(a.s.id!)!.players.find((p) => p.id === b.id)!.pet, 'dewey');
+  console.log('PASS: three-second respawn preserves the selected pet for other clients');
   const prior = snapshots.get(a.s.id!)!.players.find((p) => p.id === a.id)!.position;
   a.s.emit('input', {
     seq: 1e9,
@@ -125,18 +131,18 @@ try {
   const saved = { id: b.id, token: b.token };
   b.s.disconnect();
   await pause(150);
-  const rejoined = await connect('Bob', a.room, saved.token);
+  const rejoined = await connect('Bob', a.room, saved.token, 'rocky');
   assert.equal(rejoined.id, saved.id);
-  const takeover = await connect('Bob', a.room, saved.token);
+  const takeover = await connect('Bob', a.room, saved.token, 'rocky');
   assert.equal(takeover.id, saved.id);
   await pause(100);
   assert.equal(rejoined.s.connected, false);
   console.log(
-    'PASS: invalid input rejected; reconnect and half-open connection takeover restore identity',
+    'PASS: invalid input rejected; reconnect and half-open takeover preserve identity and update the selected character',
   );
   const other = await connect('Isolated');
   assert.equal(other.room, a.room);
-  assert.ok(snapshots.get(other.s.id!)!.players.length >= 8);
+  assert.ok(snapshots.get(other.s.id!)!.players.length >= pets.length);
   console.log('PASS: all entrants share the same perpetual public arena');
 } finally {
   for (const s of clients) s.disconnect();
