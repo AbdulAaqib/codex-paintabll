@@ -191,6 +191,16 @@ function CameraRig() {
 function ShotEffect({ shot }: { shot: Shot }) {
   const trail = useRef<THREE.Group>(null),
     burst = useRef<THREE.Group>(null);
+  const effects = useLoader(THREE.TextureLoader, '/characters/paint-effects.png');
+  const effectTexture = useMemo(() => {
+    const t = effects.clone();
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(0.25, 0.5);
+    t.offset.set(shot.hit ? 0.75 : 0, shot.hit ? 0.5 : 0.5);
+    t.needsUpdate = true;
+    return t;
+  }, [effects, shot.hit]);
   const now = Date.now() + runtime.clockOffset;
   useFrame(() => {
     const age = Date.now() + runtime.clockOffset - shot.at;
@@ -225,8 +235,9 @@ function ShotEffect({ shot }: { shot: Shot }) {
         ))}
       </group>
       <mesh position={to}>
-        <sphereGeometry args={[0.095 + (shot.hit?.length ? 0.04 : 0), 7, 6]} />
-        <meshStandardMaterial color={shot.color} roughness={0.25} />
+        <sprite scale={shot.hit ? [1.0, 1.0, 1] : [0.35, 0.35, 1]}>
+          <spriteMaterial map={effectTexture} color={shot.color} transparent depthWrite={false} />
+        </sprite>
       </mesh>
     </group>
   );
