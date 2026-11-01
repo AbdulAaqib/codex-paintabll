@@ -46,3 +46,10 @@ Finish production single-arena/mobile checks, push one initial commit to the pub
 - Added CI for web/server type checking, unit tests and production frontend builds.
 - Corrected the existing solo-combat test fixture to keep companion fire on cooldown; player-shot and respawn assertions remain intact.
 - The VPS server is separate from Vercel’s frontend deployment pipeline.
+
+## Landing-page scrolling
+
+- The lobby now scrolls vertically on short laptop windows; its form and footer participate in normal layout rather than clipping below the viewport.
+- The 3D background stays fixed while the lobby scrolls.
+- Browser-verified at 1366×620, 1280×720 and 390×844: mouse-wheel scrolling reaches the entry button without horizontal overflow.
+- Confirmed entering the arena still produces a fixed 620px-high game viewport with scrolling disabled. Web/server type checking passes.
