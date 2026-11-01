@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env*
+!.env.example
+.vercel/
+*.tsbuildinfo
+artifacts/
+*.mp4
+hackathon-map-rev03.webp
+.vercel

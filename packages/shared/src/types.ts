@@ -1,0 +1,60 @@
+export type Vec3 = { x: number; y: number; z: number };
+export type Input = {
+  seq: number;
+  x: number;
+  z: number;
+  yaw: number;
+  pitch: number;
+  jump: boolean;
+  dive: boolean;
+  stumble: boolean;
+  fire: boolean;
+};
+export type Player = {
+  id: string;
+  name: string;
+  color: string;
+  position: Vec3;
+  vy: number;
+  yaw: number;
+  pitch: number;
+  hp: number;
+  score: number;
+  deaths: number;
+  seq: number;
+  moving: boolean;
+  grounded: boolean;
+  knockUntil: number;
+  diveUntil: number;
+  respawnAt: number;
+  protectedUntil: number;
+  avatarUrl?: string;
+};
+export type Shot = {
+  id: string;
+  shooter: string;
+  from: Vec3;
+  to: Vec3;
+  color: string;
+  hit?: string;
+  killed?: boolean;
+  at: number;
+};
+export type Feed = { id: string; killer: string; victim: string; color: string; at: number };
+export type Snapshot = {
+  room: string;
+  players: Player[];
+  time: number;
+  endsAt: number;
+  round: number;
+  feed: Feed[];
+  phase: 'playing' | 'finished';
+};
+export type Box = {
+  id: string;
+  position: [number, number, number];
+  size: [number, number, number];
+  color: string;
+  kind?: 'wall' | 'cover' | 'table' | 'planter' | 'ramp' | 'chairs';
+  rotation?: number;
+};

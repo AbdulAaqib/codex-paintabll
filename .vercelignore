@@ -1,0 +1,9 @@
+*.mp4
+hackathon-map-rev03.webp
+artifacts/
+weppy-project-sync/
+**/.next/
+**/node_modules/
+.git/
+.env*
+*.tsbuildinfo
