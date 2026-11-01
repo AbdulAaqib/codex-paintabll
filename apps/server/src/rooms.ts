@@ -9,7 +9,6 @@ export type Member = {
   input: Input;
   lastInputAt: number;
   lastShot: number;
-  lastPetShot: number;
   lastReceivedSeq: number;
   rateStart: number;
   rateCount: number;

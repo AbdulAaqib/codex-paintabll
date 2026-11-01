@@ -101,7 +101,6 @@ io.on('connection', (socket) => {
         input: idleInput(),
         lastInputAt: now,
         lastShot: 0,
-        lastPetShot: 0,
         lastReceivedSeq: -1,
         rateStart: now,
         rateCount: 0,
